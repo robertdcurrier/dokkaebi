@@ -1,9 +1,10 @@
 # Core Dependencies
 pandas>=2.0.0
 numpy>=1.24.0
-yfinance>=0.2.28
+alpaca-py>=0.42.0  # Alpaca Markets API
 requests>=2.31.0
 beautifulsoup4>=4.12.0
+
 
 # Social Media APIs
 praw>=7.7.0  # Reddit API
@@ -20,6 +21,8 @@ aiohttp>=3.8.0
 asyncio>=3.4.3
 redis>=5.0.0  # For caching
 sqlalchemy>=2.0.0
+duckdb>=0.9.0  # High-performance analytical database
+click>=8.1.0  # CLI framework
 
 # Sentiment Analysis
 vaderSentiment>=3.3.2
@@ -30,6 +33,7 @@ transformers>=4.30.0  # For advanced NLP
 plotly>=5.14.0
 dash>=2.11.0
 prometheus-client>=0.17.0
+textual>=0.48.0  # Modern TUI framework
 
 # Testing
 pytest>=7.4.0
@@ -41,3 +45,4 @@ python-dateutil>=2.8.2
 pytz>=2023.3
 colorama>=0.4.6
 rich>=13.5.0  # Beautiful terminal output
+tqdm>=4.65.0  # Progress bars

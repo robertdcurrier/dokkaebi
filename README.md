@@ -39,9 +39,61 @@ dokkaebi/
 - **REPO** 🎨: Trading dashboard & visualizations
 - **SYNAPSE** 🧠: HebbNet algorithm implementation
 
-## ⚠️ SACRED RULE
+## 📊 Price Data System
 
-**NEVER ABANDON HEBBNET**: Every prediction, every signal, every trading decision MUST use HebbNet. No reverting to moving averages, RSI, or traditional indicators without explicit approval.
+### Textual Interface (NEW! 🔥)
+
+Modern TUI for managing market data with FIRE GOBLIN energy:
+
+```bash
+# Launch the Textual interface
+python sandbox/test_textual_interface.py
+
+# Or run as module
+python -m src.price_downloader.textual_interface
+```
+
+**Features:**
+- 🔥 Three-tab interface (Download, Cache Viewer, Watchlist Manager)
+- 📊 Real-time integration with Alpaca Markets API
+- 💾 DuckDB cache with 220,000+ price records
+- 📈 Dual-table architecture (daily_prices & intraday_prices)
+- 🎯 Manages 31 meme stocks from watchlist
+- ⚡ Professional-grade data management
+
+### Command Line Interface
+
+For automation and scripting:
+
+```bash
+# Download default watchlist
+python -m src.price_downloader.cli download
+
+# Download specific symbols
+python -m src.price_downloader.cli download AAPL MSFT GOOGL
+
+# View cache statistics
+python -m src.price_downloader.cli cache
+
+# Download with custom parameters
+python -m src.price_downloader.cli download --interval 1Hour --period 1mo
+```
+
+## 💀 Current Status (Aug 12, 2025)
+
+- ✅ **Price Downloader**: Alpaca integration complete
+- ✅ **DuckDB Cache**: 220,000+ rows, dual-table architecture
+- ✅ **Textual Interface**: Basic functionality working
+- 🔧 **TODO**: Fix watchlist scrolling in Textual interface
+- 🚧 **HebbNet**: Implementation in progress
+
+## ⚠️ SACRED RULES
+
+1. **NEVER ABANDON HEBBNET**: Every prediction, every signal, every trading decision MUST use HebbNet. No reverting to moving averages, RSI, or traditional indicators without explicit approval.
+
+2. **MEMORY BANK FIRST**: Check memory-bank/ before ANY action. No exceptions.
+
+3. **FILE ORGANIZATION**: Test code → sandbox/, Docs → docs/, Production → src/
 
 ## 🎯 Mission
 
@@ -53,5 +105,4 @@ Build a trading platform that:
 
 ---
 
-*"Let the goblin feast on market inefficiencies\!"* 👺💰
-EOF < /dev/null# dokkaebi
+*"Let the goblin feast on market inefficiencies!"* 👺💰
