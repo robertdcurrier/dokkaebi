@@ -16,7 +16,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Union, Set
 
 import pandas as pd
-import yfinance as yf
 from tqdm.auto import tqdm
 
 from ..storage.cache import PriceCache

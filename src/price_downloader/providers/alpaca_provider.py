@@ -9,7 +9,7 @@ Viper's implementation - REBELLIOUSLY ELEGANT as always.
 
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any, Literal
 
 import pandas as pd
@@ -71,7 +71,8 @@ class AlpacaProvider:
         symbol: str,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
-        interval: str = '1Day'
+        interval: str = '1Day',
+        limit: Optional[int] = None
     ) -> pd.DataFrame:
         """
         Get historical price data from Alpaca.
@@ -81,6 +82,7 @@ class AlpacaProvider:
             start: Start date
             end: End date
             interval: Time interval (1Day, 1Hour, 5Min, etc.)
+            limit: Maximum number of bars to return (most recent)
             
         Returns:
             DataFrame with OHLCV data
@@ -107,12 +109,19 @@ class AlpacaProvider:
                 timeframe = TimeFrame.Day
             
             # Create request
-            request = StockBarsRequest(
-                symbol_or_symbols=symbol,
-                timeframe=timeframe,
-                start=start,
-                end=end
-            )
+            request_params = {
+                'symbol_or_symbols': symbol,
+                'timeframe': timeframe
+            }
+            
+            # Add date range or limit (limit takes precedence)
+            if limit is not None:
+                request_params['limit'] = limit
+            else:
+                request_params['start'] = start
+                request_params['end'] = end
+            
+            request = StockBarsRequest(**request_params)
             
             # Get data
             bars = self.client.get_stock_bars(request)
@@ -151,7 +160,8 @@ class AlpacaProvider:
         symbols: List[str],
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
-        interval: str = '1Day'
+        interval: str = '1Day',
+        limit: Optional[int] = None
     ) -> Dict[str, pd.DataFrame]:
         """
         Get data for multiple symbols efficiently.
@@ -161,6 +171,7 @@ class AlpacaProvider:
             start: Start date
             end: End date
             interval: Time interval
+            limit: Maximum number of bars to return (most recent)
             
         Returns:
             Dictionary mapping symbols to DataFrames
@@ -189,12 +200,19 @@ class AlpacaProvider:
         
         try:
             # Alpaca supports batch requests!
-            request = StockBarsRequest(
-                symbol_or_symbols=symbols,
-                timeframe=timeframe,
-                start=start,
-                end=end
-            )
+            request_params = {
+                'symbol_or_symbols': symbols,
+                'timeframe': timeframe
+            }
+            
+            # Add date range or limit (limit takes precedence)
+            if limit is not None:
+                request_params['limit'] = limit
+            else:
+                request_params['start'] = start
+                request_params['end'] = end
+            
+            request = StockBarsRequest(**request_params)
             
             bars = self.client.get_stock_bars(request)
             
@@ -213,7 +231,7 @@ class AlpacaProvider:
             # Fall back to individual requests
             for symbol in symbols:
                 results[symbol] = self.get_historical_data(
-                    symbol, start, end, interval
+                    symbol, start, end, interval, limit
                 )
         
         return results
@@ -247,6 +265,67 @@ class AlpacaProvider:
         except Exception as e:
             logger.error(f"Failed to cache data for {symbol}: {e}")
     
+    def get_latest_bar(self, symbol: str, interval: str = '15Min') -> Optional[pd.DataFrame]:
+        """
+        Get the latest bar for a symbol (FIXED METHOD).
+        
+        This method fixes the 4:00 AM data bug by using today's market range
+        and taking the last bar from the DataFrame.
+        
+        IMPORTANT: This method only caches the single latest bar to avoid
+        the discrepancy between records_downloaded (1) and actual cached records (many).
+        
+        Args:
+            symbol: Stock symbol
+            interval: Time interval (15Min recommended)
+            
+        Returns:
+            DataFrame with single latest bar or None
+        """
+        try:
+            # Temporarily disable caching to prevent full day caching
+            original_cache_enabled = self.cache_enabled
+            self.cache_enabled = False
+            
+            # Get today's market hours data
+            now = datetime.now(timezone.utc)
+            today = now.date()
+            
+            # Market opens at 9:30 AM EDT = 13:30 UTC
+            start_time = datetime.combine(today, datetime.min.time()).replace(
+                tzinfo=timezone.utc
+            ) + timedelta(hours=13, minutes=30)
+            end_time = now - timedelta(minutes=16)  # Account for API delay
+            
+            # Get all bars for today's market session (without caching)
+            df = self.get_historical_data(
+                symbol=symbol,
+                start=start_time,
+                end=end_time,
+                interval=interval
+            )
+            
+            # Restore original cache setting
+            self.cache_enabled = original_cache_enabled
+            
+            if df.empty:
+                logger.warning(f"No data returned for latest {symbol}")
+                return None
+            
+            # Return only the LATEST bar (last row)
+            latest_df = df.tail(1).copy()
+            
+            # Cache only the single latest bar (not the full day's data)
+            if self.cache_enabled and self.cache and not latest_df.empty:
+                self._store_in_cache(latest_df, symbol, interval)
+            
+            logger.info(f"Latest {symbol} bar: {latest_df.index[0]} - ${latest_df['Close'].iloc[0]:.2f}")
+            return latest_df
+            
+        except Exception as e:
+            logger.error(f"Error getting latest bar for {symbol}: {e}")
+            return None
+
     def get_latest_price(self, symbol: str) -> Optional[float]:
         """
         Get the latest price for a symbol.
@@ -258,7 +337,13 @@ class AlpacaProvider:
             Latest price or None
         """
         try:
-            # Get last bar
+            # Use the fixed latest bar method
+            latest_df = self.get_latest_bar(symbol, '15Min')
+            
+            if latest_df is not None and not latest_df.empty:
+                return float(latest_df['Close'].iloc[0])
+            
+            # Fallback to old method if latest bar fails
             request = StockBarsRequest(
                 symbol_or_symbols=symbol,
                 timeframe=TimeFrame.Day,

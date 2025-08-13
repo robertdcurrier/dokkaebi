@@ -1,49 +1,31 @@
-# DOKKAEBI Default Watchlist
-# Meme stocks and high-volume targets for HebbNet training
-# Lines starting with # are comments
-
-# Classic Meme Stocks
 GME
 AMC
 BB
 NOK
 CLOV
-
-# Recent Meme Candidates
 DNUT
 GPRO
 PLTR
 SOFI
 HOOD
-
-# High Volume Tech
 AAPL
 MSFT
 GOOGL
 TSLA
 NVDA
 AMD
-
-# Crypto-Adjacent
 COIN
 MARA
 RIOT
 MSTR
-
-# Reddit Favorites
 TLRY
 SNDL
 SPCE
 RKT
 FUBO
-
-# Penny Stock Movers
 MULN
 BBIG
 ATER
-
-# WSB Hall of Fame
-PLTR
 CRSR
 PRPL
 UWMC

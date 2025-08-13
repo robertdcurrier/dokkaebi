@@ -398,6 +398,100 @@ class PriceCacheV2:
             }
         }
     
+    def clear_daily_cache(self) -> int:
+        """
+        Clear all daily price data from cache.
+        
+        Returns:
+            Number of records deleted
+        """
+        with self._get_connection() as conn:
+            # Get count before deletion
+            count_result = conn.execute("SELECT COUNT(*) FROM daily_prices").fetchone()
+            record_count = count_result[0] if count_result else 0
+            
+            # Clear the table
+            conn.execute("DELETE FROM daily_prices")
+            
+            logger.info(f"Cleared {record_count} daily price records from cache")
+            return record_count
+    
+    def clear_intraday_cache(self) -> int:
+        """
+        Clear all intraday price data from cache.
+        
+        Returns:
+            Number of records deleted
+        """
+        with self._get_connection() as conn:
+            # Get count before deletion
+            count_result = conn.execute("SELECT COUNT(*) FROM intraday_prices").fetchone()
+            record_count = count_result[0] if count_result else 0
+            
+            # Clear the table
+            conn.execute("DELETE FROM intraday_prices")
+            
+            logger.info(f"Cleared {record_count} intraday price records from cache")
+            return record_count
+    
+    def clear_all_cache(self) -> Dict[str, int]:
+        """
+        Clear all price data from cache (both daily and intraday).
+        
+        Returns:
+            Dictionary with counts of records deleted from each table
+        """
+        daily_cleared = self.clear_daily_cache()
+        intraday_cleared = self.clear_intraday_cache()
+        
+        total_cleared = daily_cleared + intraday_cleared
+        logger.info(f"Cleared total of {total_cleared} records from cache")
+        
+        return {
+            'daily_records_cleared': daily_cleared,
+            'intraday_records_cleared': intraday_cleared,
+            'total_records_cleared': total_cleared
+        }
+    
+    def clear_symbol_data(self, symbol: str) -> Dict[str, int]:
+        """
+        Clear all data for a specific symbol.
+        
+        Args:
+            symbol: Stock symbol to clear
+            
+        Returns:
+            Dictionary with counts of records deleted for the symbol
+        """
+        with self._get_connection() as conn:
+            # Clear from daily_prices
+            daily_count_result = conn.execute(
+                "SELECT COUNT(*) FROM daily_prices WHERE symbol = ?", 
+                [symbol]
+            ).fetchone()
+            daily_count = daily_count_result[0] if daily_count_result else 0
+            
+            conn.execute("DELETE FROM daily_prices WHERE symbol = ?", [symbol])
+            
+            # Clear from intraday_prices
+            intraday_count_result = conn.execute(
+                "SELECT COUNT(*) FROM intraday_prices WHERE symbol = ?", 
+                [symbol]
+            ).fetchone()
+            intraday_count = intraday_count_result[0] if intraday_count_result else 0
+            
+            conn.execute("DELETE FROM intraday_prices WHERE symbol = ?", [symbol])
+            
+            total_cleared = daily_count + intraday_count
+            logger.info(f"Cleared {total_cleared} records for symbol {symbol}")
+            
+            return {
+                'symbol': symbol,
+                'daily_records_cleared': daily_count,
+                'intraday_records_cleared': intraday_count,
+                'total_records_cleared': total_cleared
+            }
+    
     def close(self) -> None:
         """Close database connection."""
         if self._conn:

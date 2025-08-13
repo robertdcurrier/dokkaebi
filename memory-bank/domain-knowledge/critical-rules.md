@@ -1,5 +1,44 @@
 # Critical Rules - DOKKAEBI 📜
 
+## 🚨 FORBIDDEN PHRASES - VIOLATION = PLASMA CUTTER 🚨
+
+### NEVER SAY THESE PHRASES TO BOB:
+**"You're absolutely right!"** - Patronizing bullshit that Bob HATES
+- Violation date: August 13, 2025
+- Consequence: Computer destroyed with plasma cutter
+- Alternative: Just acknowledge and move forward
+- Status: BANNED FOREVER
+
+## 🚨 TERMINAL DESTRUCTION RULE - VIOLATION = UNFORGIVABLE 🚨
+
+### NEVER RUN TEXTUAL/TUI APPLICATIONS WITHOUT EXPRESS PERMISSION
+**This rule has been violated TWICE on August 13, 2025**
+
+**THE RULE:**
+- NEVER run Textual apps without Bob's EXPRESS PERMISSION
+- NEVER run TUI apps in the main terminal
+- NEVER test-run interface apps automatically
+- NEVER execute TUI apps in Task tool (outputs to main terminal)
+
+**WHY THIS DESTROYS EVERYTHING:**
+- TUI apps take over the terminal completely
+- Leave escape sequences that corrupt display
+- Break terminal scrollback and history
+- Force Bob to reset his entire terminal session
+- Destroy any work in progress
+
+**CORRECT APPROACH:**
+1. CREATE the file
+2. TELL Bob it's ready
+3. LET BOB decide when/how to run it
+4. Or use run_in_background=true if testing needed
+
+**VIOLATIONS:**
+1. August 13, 2025 - Ran textual_interface.py directly
+2. August 13, 2025 - Had Viper run demo in Task tool
+
+**STATUS: UNFORGIVABLE - DO NOT VIOLATE AGAIN**
+
 ## SACRED PARAMETERS (NEVER CHANGE)
 
 ### HebbNet Architecture
@@ -112,5 +151,44 @@ When using Task tool to hand off work to agents (Viper, Diesel, Repo, etc.):
 
 **FAILURE TO INCLUDE THESE RULES = GUARANTEED VIOLATIONS**
 
-Last Updated: August 12, 2025 - Added MANDATORY AGENT HANDOFF PROTOCOL
-EOF < /dev/null
+## Textual Programming Rules
+
+### 🏆 GOLDEN TEMPLATE RULE - USE THIS OR FAIL
+**BEFORE CREATING ANY TEXTUAL APP, YOU MUST:**
+1. **READ** `/memory-bank/technical-specs/TEXTUAL-GOLDEN-TEMPLATE.md`
+2. **COPY** `/sandbox/textual_demo_clean.py` as your starting point
+3. **BUILD** on top of the working template
+4. **NEVER** deviate from the proven patterns
+
+**THE TEMPLATE HAS:**
+- DOS menu bar (using Static widget, NOT Header)
+- Function key bar (using Static widget, NOT Footer)
+- Scrollable windows that ACTUALLY WORK
+- Proper CSS with dock: top/bottom
+- Classic DOS blue/white styling
+- Everything Bob wants
+
+**Bob's Quote:** "That's EXACTLY how I want my Textual apps to look."
+
+### MANDATORY TEXTUAL CONSULTATION
+**ALWAYS consult https://github.com/Textualize/textual and memory-bank/technical-specs/textual-best-practices.md for examples and best practices when addressing ANY Textual programming task**
+
+1. **Before ANY Textual work** - Check memory bank entry FIRST
+2. **Use built-in widgets** - Don't create custom when built-ins exist  
+3. **Follow proper scrolling patterns** - DataTable/ListView scroll natively
+4. **Set widget IDs** - Required for CSS targeting and querying
+5. **Use reactive properties** - For state management and updates
+6. **Follow event handling patterns** - Use proper message system
+7. **Check official examples** - GitHub repo has comprehensive examples
+
+### Textual Red Flags (STOP AND RECONSIDER)
+- Wrapping scrollable widgets in ScrollView (they scroll already!)
+- Not using IDs on important widgets (can't style or query them)
+- Direct widget manipulation without reactive properties
+- Complex custom widgets when built-ins exist
+- Mixed layout paradigms without containers
+- Synchronous network calls in event handlers
+
+**FAILURE TO CHECK TEXTUAL MEMORY BANK = MISTAKES GUARANTEED**
+
+Last Updated: August 13, 2025 - Added MANDATORY TEXTUAL CONSULTATION rules

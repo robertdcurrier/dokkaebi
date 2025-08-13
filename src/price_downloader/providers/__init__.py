@@ -2,11 +2,12 @@
 DOKKAEBI Price Data Providers
 
 Multiple data source providers for resilient price data fetching.
-When Yahoo Finance rate limits us, we've got backups ready to roll!
+Using Alpaca Markets as our primary data source - professional and unlimited!
 """
 
 from .base import BaseProvider
-from .yahoo_provider import YahooProvider  
-from .iex_provider import IEXCloudProvider
+# from .yahoo_provider import YahooProvider  # Removed - using Alpaca only
+# from .iex_provider import IEXCloudProvider  # IEX shutting down
+from .alpaca_provider import AlpacaProvider
 
-__all__ = ['BaseProvider', 'YahooProvider', 'IEXCloudProvider']
+__all__ = ['BaseProvider', 'AlpacaProvider']
