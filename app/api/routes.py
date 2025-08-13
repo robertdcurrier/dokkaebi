@@ -531,3 +531,636 @@ async def test_alpaca_connection():
             "provider": "Alpaca Markets",
             "message": str(e)
         }
+
+
+# =============================================================================
+# HEBBNET MODEL INTEGRATION - BIOLOGICAL NEURAL NETWORKS FOR TRADING
+# =============================================================================
+
+class ModelStatusResponse(BaseModel):
+    """Model status response."""
+    status: str  # UNTRAINED, TRAINED, TRAINING
+    confidence: float  # 0-100
+    last_signal: Optional[str]  # BUY, SELL, HOLD, NONE
+    accuracy: Optional[float]  # Model accuracy percentage
+
+
+class TrainingRequest(BaseModel):
+    """Training request body."""
+    model: str  # hebbnet_v1, hebbnet_v2, hebbnet_v3
+    epochs: int
+    learning_rate: float
+    symbols: List[str]
+
+
+class TrainingStatusResponse(BaseModel):
+    """Training status response."""
+    status: str  # training, completed, failed, not_started
+    current_epoch: Optional[int]
+    total_epochs: Optional[int]
+    current_loss: Optional[float]
+    final_loss: Optional[float]
+    error: Optional[str]
+
+
+class PredictionRequest(BaseModel):
+    """Prediction request body."""
+    model: str
+    symbols: Optional[List[str]] = None
+
+
+class PredictionResponse(BaseModel):
+    """Prediction response."""
+    status: str
+    message: str
+    predictions: List[Dict[str, Any]]
+    accuracy: Optional[float]
+
+
+# Global model state management
+model_states = {
+    'hebbnet_v1': {'status': 'UNTRAINED', 'confidence': 0.0, 'last_signal': 'NONE'},
+    'hebbnet_v2': {'status': 'UNTRAINED', 'confidence': 0.0, 'last_signal': 'NONE'},
+    'hebbnet_v3': {'status': 'UNTRAINED', 'confidence': 0.0, 'last_signal': 'NONE'}
+}
+
+training_state = {
+    'status': 'not_started',
+    'current_epoch': 0,
+    'total_epochs': 0,
+    'current_loss': 0.0,
+    'model': None,
+    'should_stop': False
+}
+
+
+@router.get("/models/list")
+async def list_models():
+    """
+    List available HebbNet models.
+    
+    Returns:
+        dict: Available models with their status
+    """
+    models = []
+    for model_id, state in model_states.items():
+        model_name = {
+            'hebbnet_v1': 'HebbNet v1.0 - Basic Spike Learning',
+            'hebbnet_v2': 'HebbNet v2.0 - Advanced Plasticity', 
+            'hebbnet_v3': 'HebbNet v3.0 - Multi-Layer STDP'
+        }.get(model_id, model_id)
+        
+        models.append({
+            'id': model_id,
+            'name': model_name,
+            'status': state['status'],
+            'confidence': state['confidence'],
+            'last_signal': state['last_signal']
+        })
+    
+    return {
+        'status': 'success',
+        'models': models,
+        'count': len(models)
+    }
+
+
+@router.get("/models/status/{model_id}", response_model=ModelStatusResponse)
+async def get_model_status(model_id: str):
+    """
+    Get status of a specific HebbNet model.
+    
+    Args:
+        model_id: Model identifier (hebbnet_v1, hebbnet_v2, hebbnet_v3)
+        
+    Returns:
+        ModelStatusResponse: Model status information
+    """
+    if model_id not in model_states:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model {model_id} not found. Available: {list(model_states.keys())}"
+        )
+    
+    state = model_states[model_id]
+    return ModelStatusResponse(
+        status=state['status'],
+        confidence=state['confidence'],
+        last_signal=state['last_signal'],
+        accuracy=state.get('accuracy', None)
+    )
+
+
+@router.post("/models/save/{model_id}")
+async def save_model(model_id: str):
+    """
+    Save trained HebbNet model weights to persistent storage.
+    
+    Args:
+        model_id: Model identifier to save
+        
+    Returns:
+        dict: Save operation result
+    """
+    if model_id not in model_states:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model {model_id} not found"
+        )
+    
+    state = model_states[model_id]
+    if state['status'] != 'TRAINED':
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot save untrained model. Status: {state['status']}"
+        )
+    
+    try:
+        # Create models directory if it doesn't exist
+        models_dir = Path("models")
+        models_dir.mkdir(exist_ok=True)
+        
+        # Save model metadata (weights will be implemented with actual HebbNet)
+        model_file = models_dir / f"{model_id}.json"
+        model_data = {
+            'model_id': model_id,
+            'status': state['status'],
+            'confidence': state['confidence'],
+            'last_signal': state['last_signal'],
+            'accuracy': state.get('accuracy', 0.0),
+            'saved_at': datetime.now().isoformat(),
+            'weights_file': f"{model_id}_weights.pkl"  # Placeholder for actual weights
+        }
+        
+        with open(model_file, 'w') as f:
+            import json
+            json.dump(model_data, f, indent=2)
+        
+        return {
+            'status': 'success',
+            'message': f'Model {model_id} saved successfully',
+            'file': str(model_file)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to save model: {str(e)}"
+        )
+
+
+@router.post("/models/load/{model_id}")
+async def load_model(model_id: str):
+    """
+    Load HebbNet model weights from persistent storage.
+    
+    Args:
+        model_id: Model identifier to load
+        
+    Returns:
+        dict: Load operation result
+    """
+    if model_id not in model_states:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model {model_id} not found"
+        )
+    
+    try:
+        model_file = Path("models") / f"{model_id}.json"
+        if not model_file.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"No saved weights found for {model_id}"
+            )
+        
+        with open(model_file, 'r') as f:
+            import json
+            model_data = json.load(f)
+        
+        # Update model state
+        model_states[model_id].update({
+            'status': model_data.get('status', 'TRAINED'),
+            'confidence': model_data.get('confidence', 0.0),
+            'last_signal': model_data.get('last_signal', 'NONE'),
+            'accuracy': model_data.get('accuracy', 0.0)
+        })
+        
+        return {
+            'status': 'success',
+            'message': f'Model {model_id} loaded successfully',
+            'loaded_at': model_data.get('saved_at', 'unknown')
+        }
+        
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No saved model found for {model_id}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load model: {str(e)}"
+        )
+
+
+@router.post("/models/reset/{model_id}")
+async def reset_model(model_id: str):
+    """
+    Reset HebbNet model to untrained state.
+    
+    Args:
+        model_id: Model identifier to reset
+        
+    Returns:
+        dict: Reset operation result
+    """
+    if model_id not in model_states:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model {model_id} not found"
+        )
+    
+    try:
+        # Reset model state
+        model_states[model_id] = {
+            'status': 'UNTRAINED',
+            'confidence': 0.0,
+            'last_signal': 'NONE',
+            'accuracy': 0.0
+        }
+        
+        # Delete saved model file if it exists
+        model_file = Path("models") / f"{model_id}.json"
+        if model_file.exists():
+            model_file.unlink()
+        
+        return {
+            'status': 'success',
+            'message': f'Model {model_id} reset to untrained state'
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reset model: {str(e)}"
+        )
+
+
+@router.post("/models/train", response_model=dict)
+async def start_training(request: TrainingRequest, background_tasks: BackgroundTasks):
+    """
+    Start HebbNet model training with biological neural network learning.
+    
+    Args:
+        request: Training configuration
+        background_tasks: FastAPI background task manager
+        
+    Returns:
+        dict: Training start confirmation
+    """
+    if request.model not in model_states:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model {request.model} not found"
+        )
+    
+    if training_state['status'] == 'training':
+        raise HTTPException(
+            status_code=400,
+            detail="Training already in progress. Stop current training first."
+        )
+    
+    # Validate parameters
+    if request.epochs < 1 or request.epochs > 1000:
+        raise HTTPException(
+            status_code=400,
+            detail="Epochs must be between 1 and 1000"
+        )
+    
+    if request.learning_rate <= 0 or request.learning_rate > 0.1:
+        raise HTTPException(
+            status_code=400,
+            detail="Learning rate must be between 0.0001 and 0.1"
+        )
+    
+    if len(request.symbols) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one symbol is required for training"
+        )
+    
+    try:
+        # Initialize training state
+        training_state.update({
+            'status': 'training',
+            'current_epoch': 0,
+            'total_epochs': request.epochs,
+            'current_loss': 1.0,  # Start with high loss
+            'model': request.model,
+            'should_stop': False,
+            'learning_rate': request.learning_rate,
+            'symbols': request.symbols
+        })
+        
+        # Update model status
+        model_states[request.model]['status'] = 'TRAINING'
+        
+        # Start training in background
+        background_tasks.add_task(run_hebbnet_training, request)
+        
+        return {
+            'status': 'success',
+            'message': f'Training started for {request.model}',
+            'epochs': request.epochs,
+            'symbols': len(request.symbols),
+            'learning_rate': request.learning_rate
+        }
+        
+    except Exception as e:
+        training_state['status'] = 'failed'
+        model_states[request.model]['status'] = 'UNTRAINED'
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start training: {str(e)}"
+        )
+
+
+@router.get("/models/training/status", response_model=TrainingStatusResponse)
+async def get_training_status():
+    """
+    Get current training status and progress.
+    
+    Returns:
+        TrainingStatusResponse: Training progress information
+    """
+    return TrainingStatusResponse(
+        status=training_state['status'],
+        current_epoch=training_state.get('current_epoch'),
+        total_epochs=training_state.get('total_epochs'),
+        current_loss=training_state.get('current_loss'),
+        final_loss=training_state.get('final_loss'),
+        error=training_state.get('error')
+    )
+
+
+@router.post("/models/training/stop")
+async def stop_training():
+    """
+    Stop current training process.
+    
+    Returns:
+        dict: Stop operation result
+    """
+    if training_state['status'] != 'training':
+        raise HTTPException(
+            status_code=400,
+            detail=f"No training in progress. Status: {training_state['status']}"
+        )
+    
+    try:
+        training_state['should_stop'] = True
+        training_state['status'] = 'stopping'
+        
+        return {
+            'status': 'success',
+            'message': 'Training stop requested - will complete current epoch'
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to stop training: {str(e)}"
+        )
+
+
+async def run_hebbnet_training(request: TrainingRequest):
+    """
+    Background task to run HebbNet training with biological learning rules.
+    This simulates the training process - will be replaced with actual HebbNet implementation.
+    """
+    import asyncio
+    import random
+    
+    try:
+        print(f"🧠 Starting {request.model} training: {request.epochs} epochs, {len(request.symbols)} symbols")
+        
+        # Get training data from cache
+        cache = get_cache()
+        training_data = []
+        
+        with cache._get_connection() as conn:
+            for symbol in request.symbols:
+                # Get recent 15-minute data for training
+                query = """
+                SELECT symbol, bar_timestamp, open_price, high_price, low_price, close_price, volume 
+                FROM intraday_prices 
+                WHERE symbol = ? AND timeframe = '15min'
+                ORDER BY bar_timestamp DESC 
+                LIMIT 1000
+                """
+                result = conn.execute(query, [symbol]).fetchall()
+                training_data.extend(result)
+        
+        if len(training_data) == 0:
+            training_state['status'] = 'failed'
+            training_state['error'] = 'No training data available - download market data first'
+            model_states[request.model]['status'] = 'UNTRAINED'
+            return
+        
+        print(f"🔬 Training with {len(training_data)} market data samples")
+        
+        # Simulate biological neural network training
+        base_loss = 1.0
+        for epoch in range(1, request.epochs + 1):
+            if training_state['should_stop']:
+                print("🛑 Training stopped by user request")
+                training_state['status'] = 'stopped'
+                model_states[request.model]['status'] = 'UNTRAINED'
+                return
+            
+            # Simulate Hebbian learning progress
+            progress = epoch / request.epochs
+            current_loss = base_loss * (1.0 - progress * 0.8) + random.uniform(-0.05, 0.05)
+            current_loss = max(0.01, current_loss)  # Ensure loss doesn't go negative
+            
+            training_state.update({
+                'current_epoch': epoch,
+                'current_loss': current_loss
+            })
+            
+            # Simulate epoch duration (faster for demo)
+            await asyncio.sleep(0.5)
+        
+        # Training completed successfully
+        final_loss = training_state['current_loss']
+        accuracy = max(50.0, 90.0 - final_loss * 40.0)  # Convert loss to accuracy
+        confidence = min(95.0, accuracy - 5.0)
+        
+        training_state.update({
+            'status': 'completed',
+            'final_loss': final_loss
+        })
+        
+        model_states[request.model].update({
+            'status': 'TRAINED',
+            'confidence': confidence,
+            'accuracy': accuracy,
+            'last_signal': 'NONE'  # Will be set when predictions are generated
+        })
+        
+        print(f"🎯 {request.model} training completed! Loss: {final_loss:.4f}, Accuracy: {accuracy:.1f}%")
+        
+    except Exception as e:
+        print(f"❌ Training failed: {e}")
+        training_state.update({
+            'status': 'failed',
+            'error': str(e)
+        })
+        model_states[request.model]['status'] = 'UNTRAINED'
+
+
+@router.post("/models/predict", response_model=PredictionResponse)
+async def generate_predictions(request: PredictionRequest):
+    """
+    Generate trading signals using trained HebbNet model.
+    
+    Args:
+        request: Prediction request with model and optional symbols
+        
+    Returns:
+        PredictionResponse: Generated predictions and signals
+    """
+    if request.model not in model_states:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Model {request.model} not found"
+        )
+    
+    model_state = model_states[request.model]
+    if model_state['status'] != 'TRAINED':
+        raise HTTPException(
+            status_code=400,
+            detail=f"Model {request.model} is not trained. Status: {model_state['status']}"
+        )
+    
+    try:
+        # Get symbols to predict on
+        symbols = request.symbols if request.symbols else load_watchlist()
+        if not symbols:
+            raise HTTPException(
+                status_code=400,
+                detail="No symbols provided and watchlist is empty"
+            )
+        
+        # Get recent market data for predictions
+        cache = get_cache()
+        predictions = []
+        
+        with cache._get_connection() as conn:
+            for symbol in symbols:
+                # Get latest price data
+                query = """
+                SELECT symbol, close_price, bar_timestamp
+                FROM intraday_prices 
+                WHERE symbol = ? AND timeframe = '15min'
+                ORDER BY bar_timestamp DESC 
+                LIMIT 1
+                """
+                result = conn.execute(query, [symbol]).fetchone()
+                
+                if result:
+                    # Generate HebbNet-based prediction (simulation)
+                    import random
+                    confidence = random.uniform(0.6, 0.95)  # 60-95% confidence
+                    signal_prob = random.random()
+                    
+                    if signal_prob < 0.3:
+                        signal = 'BUY'
+                    elif signal_prob < 0.6:
+                        signal = 'SELL'
+                    else:
+                        signal = 'HOLD'
+                    
+                    predictions.append({
+                        'symbol': result[0],
+                        'signal': signal,
+                        'confidence': confidence,
+                        'price': float(result[1]),
+                        'timestamp': result[2]
+                    })
+        
+        if predictions:
+            # Update model state with latest signal
+            latest_signal = predictions[0]['signal']
+            model_states[request.model]['last_signal'] = latest_signal
+            
+        return PredictionResponse(
+            status='success',
+            message=f'Generated {len(predictions)} predictions using {request.model}',
+            predictions=predictions,
+            accuracy=model_state.get('accuracy', 0.0)
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Prediction generation failed: {str(e)}"
+        )
+
+
+@router.get("/models/signals/recent")
+async def get_recent_signals(limit: int = 50):
+    """
+    Get recent trading signals from all models.
+    
+    Args:
+        limit: Maximum number of recent signals to return
+        
+    Returns:
+        dict: Recent signals data
+    """
+    try:
+        # This is a placeholder - in real implementation, signals would be stored in database
+        # For now, generate some sample recent signals
+        import random
+        from datetime import datetime, timedelta
+        
+        symbols = load_watchlist()[:10]  # Limit for demo
+        predictions = []
+        
+        for i in range(min(limit, len(symbols) * 3)):
+            symbol = random.choice(symbols)
+            age_hours = random.randint(1, 24)
+            timestamp = datetime.now() - timedelta(hours=age_hours)
+            
+            signal_prob = random.random()
+            if signal_prob < 0.3:
+                signal = 'BUY'
+            elif signal_prob < 0.6:
+                signal = 'SELL'
+            else:
+                signal = 'HOLD'
+                
+            predictions.append({
+                'symbol': symbol,
+                'signal': signal,
+                'confidence': random.uniform(0.6, 0.95),
+                'price': random.uniform(50.0, 300.0),
+                'timestamp': timestamp.isoformat()
+            })
+        
+        # Sort by timestamp descending
+        predictions.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return {
+            'status': 'success',
+            'predictions': predictions[:limit],
+            'accuracy': 78.5  # Demo accuracy
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get recent signals: {str(e)}"
+        )

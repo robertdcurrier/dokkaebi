@@ -406,6 +406,66 @@
             animation: pulse 1s infinite;
         }
 
+        /* TABBED INTERFACE STYLES */
+        .tab-container {
+            width: 100%;
+        }
+
+        .tab-bar {
+            display: flex;
+            border-bottom: 3px solid #4a6580;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px 10px 0 0;
+            overflow: hidden;
+        }
+
+        .tab-button {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(74, 101, 128, 0.3) 0%, rgba(0, 0, 0, 0.3) 100%);
+            border: none;
+            color: #7da3cc;
+            padding: 15px 20px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-right: 1px solid #4a6580;
+            font-family: inherit;
+        }
+
+        .tab-button:last-child {
+            border-right: none;
+        }
+
+        .tab-button:hover {
+            background: linear-gradient(135deg, #4a6580 0%, rgba(74, 101, 128, 0.6) 100%);
+            color: #e0e6ed;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #7da3cc 0%, #4a6580 100%);
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
         /* RESPONSIVE DESIGN */
         @media (max-width: 1200px) {
             .activity-panel {
@@ -487,9 +547,19 @@
     <div class="layout-container">
         <!-- TRADING COMMAND CENTER -->
         <div class="trading-center">
-            <!-- MARKET PULSE -->
-            <div class="fire-card">
-                <h3>🚀 MARKET PULSE</h3>
+            <!-- TABBED INTERFACE -->
+            <div class="tab-container">
+                <div class="tab-bar">
+                    <button class="tab-button active" onclick="switchTab('data')">📊 DATA</button>
+                    <button class="tab-button" onclick="switchTab('models')">🧠 MODELS</button>
+                    <button class="tab-button" onclick="switchTab('analysis')">📈 ANALYSIS</button>
+                </div>
+                
+                <!-- DATA TAB CONTENT -->
+                <div id="dataTab" class="tab-content active">
+                    <!-- MARKET PULSE -->
+                    <div class="fire-card">
+                        <h3>🚀 MARKET PULSE</h3>
                 <div class="stats-row" id="marketStats">
                     <div class="stat-box">
                         <span class="stat-number" id="totalSymbols">-</span>
@@ -570,6 +640,157 @@
                     <p style="padding: 20px; text-align: center; color: #999;">Ready to load recent market data - Click Load Data to view 15-minute bars</p>
                 </div>
             </div>
+                </div> <!-- End DATA tab -->
+                
+                <!-- MODELS TAB CONTENT -->
+                <div id="modelsTab" class="tab-content">
+                    <!-- MODEL CONTROL CENTER -->
+                    <div class="fire-card">
+                        <h3>🧠 MODEL CONTROL CENTER</h3>
+                        
+                        <!-- Model Selection -->
+                        <div style="margin-bottom: 20px;">
+                            <label style="display: block; color: #7da3cc; margin-bottom: 8px; font-size: 0.9rem; font-weight: 600;">🔬 HEBBNET MODEL:</label>
+                            <select id="modelSelect" class="fire-input" style="margin: 0;" onchange="selectModel()">
+                                <option value="" selected>Select HebbNet Model...</option>
+                                <option value="hebbnet_v1">HebbNet v1.0 - Basic Spike Learning</option>
+                                <option value="hebbnet_v2">HebbNet v2.0 - Advanced Plasticity</option>
+                                <option value="hebbnet_v3">HebbNet v3.0 - Multi-Layer STDP</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Model Status Display -->
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <span class="stat-number" id="modelStatus">UNTRAINED</span>
+                                <span class="stat-label">MODEL STATUS</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-number" id="modelConfidence">0%</span>
+                                <span class="stat-label">CONFIDENCE</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-number" id="lastSignal">NONE</span>
+                                <span class="stat-label">LAST SIGNAL</span>
+                            </div>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button class="fire-button" onclick="loadModel()">📥 LOAD MODEL</button>
+                            <button class="fire-button secondary" onclick="saveModel()">💾 SAVE MODEL</button>
+                            <button class="fire-button danger" onclick="resetModel()">🔄 RESET</button>
+                        </div>
+                    </div>
+                    
+                    <!-- TRAINING INTERFACE -->
+                    <div class="trading-grid">
+                        <div class="fire-card">
+                            <h3>⚡ TRAINING INTERFACE</h3>
+                            <p style="color: #7da3cc; margin-bottom: 15px;">Configure biological neural network parameters</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label style="display: block; color: #7da3cc; margin-bottom: 5px; font-size: 0.9rem; font-weight: 600;">EPOCHS:</label>
+                                    <input type="number" id="trainingEpochs" class="fire-input" value="100" min="1" max="1000" style="margin: 0;">
+                                </div>
+                                <div>
+                                    <label style="display: block; color: #7da3cc; margin-bottom: 5px; font-size: 0.9rem; font-weight: 600;">LEARNING RATE:</label>
+                                    <input type="number" id="learningRate" class="fire-input" value="0.001" min="0.0001" max="0.1" step="0.0001" style="margin: 0;">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: #7da3cc; margin-bottom: 5px; font-size: 0.9rem; font-weight: 600;">TRAINING SYMBOLS:</label>
+                                <textarea id="trainingSymbols" placeholder="AAPL, TSLA, SPY, QQQ..." class="fire-input" rows="2"></textarea>
+                            </div>
+                            
+                            <!-- Training Progress -->
+                            <div id="trainingProgress" class="fire-card" style="display: none; background: rgba(0,0,0,0.6); margin-bottom: 15px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span style="color: #7da3cc; font-weight: 600;">TRAINING PROGRESS:</span>
+                                    <span id="progressPercent" style="color: #7da3cc;">0%</span>
+                                </div>
+                                <div style="width: 100%; background: #333; border-radius: 10px; overflow: hidden;">
+                                    <div id="progressBar" style="width: 0%; height: 20px; background: linear-gradient(90deg, #00ff00, #7da3cc); transition: width 0.3s ease;"></div>
+                                </div>
+                                <div style="margin-top: 10px; font-size: 0.85rem; color: #ccc;">
+                                    <span>Epoch: <span id="currentEpoch">0</span> | </span>
+                                    <span>Loss: <span id="currentLoss">0.000</span></span>
+                                </div>
+                            </div>
+                            
+                            <div class="button-group">
+                                <button class="fire-button primary" id="startTrainingBtn" onclick="startTraining()">🚀 START TRAINING</button>
+                                <button class="fire-button danger" id="stopTrainingBtn" onclick="stopTraining()" style="display: none;">⏹️ STOP TRAINING</button>
+                            </div>
+                        </div>
+                        
+                        <!-- PREDICTION DISPLAY -->
+                        <div class="fire-card">
+                            <h3>📊 PREDICTION DISPLAY</h3>
+                            <p style="color: #7da3cc; margin-bottom: 15px;">Recent model signals and confidence scores</p>
+                            
+                            <!-- Signal Stats -->
+                            <div class="stats-row">
+                                <div class="stat-box">
+                                    <span class="stat-number" id="buySignals">0</span>
+                                    <span class="stat-label">BUY SIGNALS</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-number" id="sellSignals">0</span>
+                                    <span class="stat-label">SELL SIGNALS</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-number" id="holdSignals">0</span>
+                                    <span class="stat-label">HOLD SIGNALS</span>
+                                </div>
+                                <div class="stat-box">
+                                    <span class="stat-number" id="modelAccuracy">0%</span>
+                                    <span class="stat-label">ACCURACY</span>
+                                </div>
+                            </div>
+                            
+                            <div class="button-group">
+                                <button class="fire-button" onclick="generatePredictions()">🎯 GENERATE SIGNALS</button>
+                                <button class="fire-button secondary" onclick="refreshPredictions()">🔄 REFRESH</button>
+                            </div>
+                            
+                            <!-- Recent Predictions Table -->
+                            <div id="predictionsTable" class="fire-table" style="margin-top: 15px;">
+                                <p style="padding: 20px; text-align: center; color: #999;">No predictions yet - Generate signals to view model output</p>
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End MODELS tab -->
+                
+                <!-- ANALYSIS TAB CONTENT -->
+                <div id="analysisTab" class="tab-content">
+                    <div class="fire-card">
+                        <h3>📈 MARKET ANALYSIS</h3>
+                        <p style="color: #7da3cc; margin-bottom: 15px;">Advanced market analysis and pattern recognition</p>
+                        
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <span class="stat-number">Coming</span>
+                                <span class="stat-label">SOON</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-number">Pattern</span>
+                                <span class="stat-label">DETECTION</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-number">Risk</span>
+                                <span class="stat-label">ANALYSIS</span>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 40px; text-align: center; color: #999; font-style: italic;">
+                            Advanced analysis features will be implemented here.<br>
+                            This tab will contain pattern recognition, risk metrics, and market insights.
+                        </div>
+                    </div>
+                </div> <!-- End ANALYSIS tab -->
+            </div> <!-- End tab-container -->
         </div>
 
         <!-- ACTIVITY FEED - FIXED RIGHT PANEL -->
@@ -963,6 +1184,416 @@
             } catch (error) {
                 addActivity(`Cache clear failed: ${error.message}`, 'error');
             }
+        }
+
+        // TABBED INTERFACE MANAGEMENT
+        function switchTab(tabName) {
+            // Hide all tab content
+            const allTabs = document.querySelectorAll('.tab-content');
+            allTabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            const allButtons = document.querySelectorAll('.tab-button');
+            allButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            const selectedTab = document.getElementById(tabName + 'Tab');
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+            
+            // Activate selected button
+            const selectedButton = event.target;
+            selectedButton.classList.add('active');
+            
+            // Log tab switch
+            addActivity(`Switched to ${tabName.toUpperCase()} tab`, 'success');
+        }
+
+        // MODEL MANAGEMENT FUNCTIONS
+        let currentModel = null;
+        let isTraining = false;
+        let trainingInterval = null;
+
+        function selectModel() {
+            const modelSelect = document.getElementById('modelSelect');
+            const selectedModel = modelSelect.value;
+            
+            if (selectedModel) {
+                currentModel = selectedModel;
+                document.getElementById('modelStatus').textContent = 'SELECTED';
+                addActivity(`Selected ${modelSelect.selectedOptions[0].text}`, 'success');
+                
+                // Load model status
+                loadModelStatus();
+            }
+        }
+
+        async function loadModelStatus() {
+            if (!currentModel) {
+                addActivity('No model selected!', 'error');
+                return;
+            }
+            
+            addActivity(`Loading ${currentModel} status...`);
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/status/${currentModel}`);
+                const data = await res.json();
+                
+                document.getElementById('modelStatus').textContent = data.status || 'UNKNOWN';
+                document.getElementById('modelConfidence').textContent = (data.confidence || 0) + '%';
+                document.getElementById('lastSignal').textContent = data.last_signal || 'NONE';
+                
+                addActivity(`Model status loaded: ${data.status}`, 'success');
+                
+            } catch (error) {
+                // If model doesn't exist yet, show default values
+                document.getElementById('modelStatus').textContent = 'UNTRAINED';
+                document.getElementById('modelConfidence').textContent = '0%';
+                document.getElementById('lastSignal').textContent = 'NONE';
+                addActivity('Model not yet trained - ready for initial training', 'info');
+            }
+        }
+
+        async function loadModel() {
+            if (!currentModel) {
+                addActivity('Select a model first!', 'error');
+                return;
+            }
+            
+            addActivity(`Loading saved ${currentModel} weights...`);
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/load/${currentModel}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    addActivity(`Model loaded: ${data.message}`, 'success');
+                    await loadModelStatus();
+                } else {
+                    addActivity(`Load failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addActivity(`Load failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function saveModel() {
+            if (!currentModel) {
+                addActivity('Select a model first!', 'error');
+                return;
+            }
+            
+            addActivity(`Saving ${currentModel} weights...`);
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/save/${currentModel}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    addActivity(`Model saved: ${data.message}`, 'success');
+                } else {
+                    addActivity(`Save failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addActivity(`Save failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function resetModel() {
+            if (!currentModel) {
+                addActivity('Select a model first!', 'error');
+                return;
+            }
+            
+            if (!confirm('Reset model weights? This will erase all training progress!')) {
+                return;
+            }
+            
+            addActivity(`Resetting ${currentModel}...`, 'error');
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/reset/${currentModel}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    addActivity(`Model reset: ${data.message}`, 'success');
+                    await loadModelStatus();
+                } else {
+                    addActivity(`Reset failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addActivity(`Reset failed: ${error.message}`, 'error');
+            }
+        }
+
+        // TRAINING FUNCTIONS
+        async function startTraining() {
+            if (!currentModel) {
+                addActivity('Select a HebbNet model first!', 'error');
+                return;
+            }
+            
+            const epochs = parseInt(document.getElementById('trainingEpochs').value);
+            const learningRate = parseFloat(document.getElementById('learningRate').value);
+            const symbolsText = document.getElementById('trainingSymbols').value.trim();
+            
+            if (!symbolsText) {
+                // Use current watchlist if no symbols specified
+                const watchlistRes = await fetch(`${apiHost}/api/watchlist`);
+                const watchlistData = await watchlistRes.json();
+                document.getElementById('trainingSymbols').value = watchlistData.symbols.join(', ');
+                symbolsText = watchlistData.symbols.join(', ');
+            }
+            
+            const symbols = symbolsText.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
+            
+            if (symbols.length === 0) {
+                addActivity('Enter training symbols or load watchlist first!', 'error');
+                return;
+            }
+            
+            addActivity(`🚀 Starting ${currentModel} training: ${epochs} epochs, ${symbols.length} symbols`, 'trade');
+            
+            // Update UI for training mode
+            isTraining = true;
+            document.getElementById('startTrainingBtn').style.display = 'none';
+            document.getElementById('stopTrainingBtn').style.display = 'inline-block';
+            document.getElementById('trainingProgress').style.display = 'block';
+            document.getElementById('modelStatus').textContent = 'TRAINING';
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/train`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: currentModel,
+                        epochs: epochs,
+                        learning_rate: learningRate,
+                        symbols: symbols
+                    })
+                });
+                
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.detail || `HTTP ${res.status}`);
+                }
+                
+                // Start polling for training progress
+                startTrainingProgressMonitor();
+                
+                addActivity(`Training started for ${currentModel} with ${symbols.length} symbols`, 'success');
+                
+            } catch (error) {
+                addActivity(`Training failed to start: ${error.message}`, 'error');
+                stopTraining();
+            }
+        }
+
+        async function stopTraining() {
+            if (!isTraining) {
+                return;
+            }
+            
+            addActivity('Stopping training...', 'error');
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/training/stop`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    addActivity(`Training stopped: ${data.message}`, 'success');
+                } else {
+                    addActivity(`Stop failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addActivity(`Stop failed: ${error.message}`, 'error');
+            }
+            
+            // Reset UI
+            isTraining = false;
+            document.getElementById('startTrainingBtn').style.display = 'inline-block';
+            document.getElementById('stopTrainingBtn').style.display = 'none';
+            document.getElementById('trainingProgress').style.display = 'none';
+            
+            if (trainingInterval) {
+                clearInterval(trainingInterval);
+                trainingInterval = null;
+            }
+            
+            // Reload model status
+            await loadModelStatus();
+        }
+
+        function startTrainingProgressMonitor() {
+            trainingInterval = setInterval(async () => {
+                if (!isTraining) {
+                    clearInterval(trainingInterval);
+                    return;
+                }
+                
+                try {
+                    const res = await fetch(`${apiHost}/api/models/training/status`);
+                    const data = await res.json();
+                    
+                    if (data.status === 'training') {
+                        const progress = Math.round((data.current_epoch / data.total_epochs) * 100);
+                        document.getElementById('progressBar').style.width = progress + '%';
+                        document.getElementById('progressPercent').textContent = progress + '%';
+                        document.getElementById('currentEpoch').textContent = data.current_epoch;
+                        document.getElementById('currentLoss').textContent = data.current_loss.toFixed(4);
+                        
+                    } else if (data.status === 'completed') {
+                        addActivity(`🔥 Training completed! Final loss: ${data.final_loss.toFixed(4)}`, 'success');
+                        stopTraining();
+                        
+                    } else if (data.status === 'failed') {
+                        addActivity(`Training failed: ${data.error}`, 'error');
+                        stopTraining();
+                    }
+                    
+                } catch (error) {
+                    console.log('Training progress check failed:', error);
+                }
+            }, 2000); // Check every 2 seconds
+        }
+
+        // PREDICTION FUNCTIONS
+        async function generatePredictions() {
+            if (!currentModel) {
+                addActivity('Select a HebbNet model first!', 'error');
+                return;
+            }
+            
+            addActivity(`🎯 Generating ${currentModel} predictions...`, 'trade');
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: currentModel
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    addActivity(`Generated ${data.predictions.length} predictions`, 'success');
+                    updatePredictionDisplay(data);
+                } else {
+                    addActivity(`Prediction failed: ${data.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addActivity(`Prediction failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function refreshPredictions() {
+            addActivity('🔄 Refreshing recent signals...');
+            
+            try {
+                const res = await fetch(`${apiHost}/api/models/signals/recent`);
+                const data = await res.json();
+                
+                updatePredictionDisplay(data);
+                addActivity(`Loaded ${data.predictions.length} recent signals`, 'success');
+                
+            } catch (error) {
+                addActivity(`Failed to refresh predictions: ${error.message}`, 'error');
+            }
+        }
+
+        function updatePredictionDisplay(data) {
+            if (!data.predictions || data.predictions.length === 0) {
+                document.getElementById('predictionsTable').innerHTML = 
+                    '<p style="padding: 20px; text-align: center; color: #999;">No predictions yet - Generate signals to view model output</p>';
+                return;
+            }
+            
+            // Update signal counts
+            const buys = data.predictions.filter(p => p.signal === 'BUY').length;
+            const sells = data.predictions.filter(p => p.signal === 'SELL').length;
+            const holds = data.predictions.filter(p => p.signal === 'HOLD').length;
+            
+            document.getElementById('buySignals').textContent = buys;
+            document.getElementById('sellSignals').textContent = sells;
+            document.getElementById('holdSignals').textContent = holds;
+            document.getElementById('modelAccuracy').textContent = (data.accuracy || 0) + '%';
+            
+            // Create predictions table
+            const table = document.createElement('table');
+            table.style.width = '100%';
+            
+            // Header
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            ['SYMBOL', 'SIGNAL', 'CONFIDENCE', 'PRICE', 'TIMESTAMP'].forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+            
+            // Body
+            const tbody = document.createElement('tbody');
+            data.predictions.forEach(pred => {
+                const tr = document.createElement('tr');
+                
+                const symbolTd = document.createElement('td');
+                symbolTd.textContent = pred.symbol;
+                tr.appendChild(symbolTd);
+                
+                const signalTd = document.createElement('td');
+                signalTd.textContent = pred.signal;
+                signalTd.style.fontWeight = 'bold';
+                signalTd.style.color = pred.signal === 'BUY' ? '#00ff00' : 
+                                      pred.signal === 'SELL' ? '#ff0000' : '#ffeb3b';
+                tr.appendChild(signalTd);
+                
+                const confidenceTd = document.createElement('td');
+                confidenceTd.textContent = (pred.confidence * 100).toFixed(1) + '%';
+                tr.appendChild(confidenceTd);
+                
+                const priceTd = document.createElement('td');
+                priceTd.textContent = '$' + pred.price.toFixed(2);
+                tr.appendChild(priceTd);
+                
+                const timeTd = document.createElement('td');
+                const date = new Date(pred.timestamp);
+                timeTd.textContent = date.toLocaleString();
+                tr.appendChild(timeTd);
+                
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            
+            const container = document.getElementById('predictionsTable');
+            container.innerHTML = '';
+            container.appendChild(table);
         }
 
         // Auto-refresh removed per Bob's request
