@@ -14,8 +14,9 @@ Successfully integrated Alpaca Markets as primary data provider:
 
 ## Working Configuration
 ```bash
-export ALPACA_API_KEY="PKU1N7FUI5SNL5UQ9PCS"
-export ALPACA_API_SECRET="Y5xtRqY4CSNLgYeIDpSUnBxoLPEYdMFuYiD5PwNJ"
+# Set these environment variables (get keys from https://alpaca.markets)
+export ALPACA_API_KEY="your-api-key-here"
+export ALPACA_API_SECRET="your-secret-key-here"
 ```
 
 ## CLI Commands

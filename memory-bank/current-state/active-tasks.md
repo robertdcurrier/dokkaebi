@@ -32,13 +32,23 @@
 
 ## Next Steps - PRIORITY ORDER
 
-### 1. FIX WATCHLIST SCROLLING (IMMEDIATE) 🔴
+### 1. REMOVE ALPACA API KEYS FROM REPO (CRITICAL SECURITY) 🚨
+- **GitGuardian flagged secrets in the repository**
+- Likely hardcoded in test scripts or memory-bank files
+- Need to:
+  - Search all files for Alpaca keys
+  - Remove any hardcoded credentials
+  - Use environment variables only
+  - Add .env to .gitignore
+  - Rotate the compromised keys on Alpaca
+
+### 2. FIX WATCHLIST SCROLLING 🔴
 - **Bob's exact words:** "For starters, the watchlist isn't scrollable. So I can't see all of it."
 - File: src/price_downloader/textual_interface.py
 - Need scrollable container for watchlist display
 - Test with: sandbox/test_textual_interface.py
 
-### 2. Textual Interface Improvements
+### 3. Textual Interface Improvements
 - Better progress indicators during downloads
 - Error handling for failed symbols
 - Refresh button for cache statistics

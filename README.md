@@ -39,6 +39,13 @@ dokkaebi/
 - **REPO** 🎨: Trading dashboard & visualizations
 - **SYNAPSE** 🧠: HebbNet algorithm implementation
 
+## 🚀 Setup
+
+1. **Clone the repository** (private repo)
+2. **Copy `.env.example` to `.env`** and add your Alpaca API keys
+3. **Install dependencies**: `pip install -r requirements.txt`
+4. **Test connection**: `python sandbox/test_alpaca_direct.py`
+
 ## 📊 Price Data System
 
 ### Textual Interface (NEW! 🔥)
@@ -79,11 +86,12 @@ python -m src.price_downloader.cli cache
 python -m src.price_downloader.cli download --interval 1Hour --period 1mo
 ```
 
-## 💀 Current Status (Aug 12, 2025)
+## 💀 Current Status (Aug 13, 2025)
 
 - ✅ **Price Downloader**: Alpaca integration complete
 - ✅ **DuckDB Cache**: 220,000+ rows, dual-table architecture
 - ✅ **Textual Interface**: Basic functionality working
+- ✅ **Security**: API keys removed from codebase (GitGuardian resolved)
 - 🔧 **TODO**: Fix watchlist scrolling in Textual interface
 - 🚧 **HebbNet**: Implementation in progress
 

@@ -8,9 +8,13 @@ import os
 import sys
 from datetime import datetime, timedelta
 
-# Set credentials
-os.environ['ALPACA_API_KEY'] = 'PKU1N7FUI5SNL5UQ9PCS'
-os.environ['ALPACA_API_SECRET'] = 'Y5xtRqY4CSNLgYeIDpSUnBxoLPEYdMFuYiD5PwNJ'
+# Load credentials from environment
+# Set these in your shell or .env file:
+# export ALPACA_API_KEY='your-api-key'
+# export ALPACA_API_SECRET='your-secret-key'
+if not os.getenv('ALPACA_API_KEY'):
+    print("ERROR: Please set ALPACA_API_KEY and ALPACA_API_SECRET environment variables")
+    sys.exit(1)
 
 print("🚀 Testing Alpaca Markets Connection\n")
 print(f"API Key: {os.environ['ALPACA_API_KEY'][:10]}...")

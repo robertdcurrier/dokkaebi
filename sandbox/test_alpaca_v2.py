@@ -7,8 +7,8 @@ import os
 from datetime import datetime, timedelta
 
 # Set credentials
-os.environ['ALPACA_API_KEY'] = 'PKU1N7FUI5SNL5UQ9PCS'
-os.environ['ALPACA_API_SECRET'] = 'Y5xtRqY4CSNLgYeIDpSUnBxoLPEYdMFuYiD5PwNJ'
+# Load from environment - set ALPACA_API_KEY
+# Load from environment - set ALPACA_API_SECRET
 
 print("🚀 Testing Alpaca Markets Data API\n")
 

@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Set Alpaca credentials
-os.environ['ALPACA_API_KEY'] = 'PKU1N7FUI5SNL5UQ9PCS'
-os.environ['ALPACA_API_SECRET'] = 'Y5xtRqY4CSNLgYeIDpSUnBxoLPEYdMFuYiD5PwNJ'
+# Load from environment - set ALPACA_API_KEY
+# Load from environment - set ALPACA_API_SECRET
 
 from src.price_downloader.providers.alpaca_provider import AlpacaProvider
 from rich.console import Console
