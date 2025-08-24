@@ -36,7 +36,10 @@ pip install -r requirements.txt
 ### 2. Launch the Trading Terminal
 ```bash
 # Start the web application
-python main.py
+uvicorn main:app --reload
+
+# Or use the convenience script:
+./start_me.sh
 
 # Open browser to: http://localhost:8000
 ```

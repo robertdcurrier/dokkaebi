@@ -107,9 +107,9 @@ def save_watchlist(symbols: List[str]) -> None:
             f.write(f"{symbol}\n")
 
 
-async def download_symbol_data(provider: AlpacaProvider, symbol: str, days_back: int = 1) -> int:
+async def download_symbol_data(provider: AlpacaProvider, symbol: str, days_back: int = 1, interval: str = '15Min') -> int:
     """
-    Download 15-minute bar data for a single symbol going back specified days.
+    Download market data for a single symbol with configurable interval.
     Uses configurable date range based on days_back parameter.
     Special case: days_back=0 downloads only the latest bar (limit=1).
 
@@ -118,12 +118,12 @@ async def download_symbol_data(provider: AlpacaProvider, symbol: str, days_back:
         symbol: Stock symbol to download
         days_back: Number of days to go back from current time (default: 1)
                   Set to 0 to get only the latest bar per symbol
+        interval: Time interval (Daily, Hourly, 30Min, 15Min)
         
     Returns:
         Number of records downloaded
     """
     try:
-        interval = '15Min'
         
         from datetime import timezone
         # End with 16-minute delay (Alpaca free tier cannot access last 15 minutes)
@@ -131,7 +131,7 @@ async def download_symbol_data(provider: AlpacaProvider, symbol: str, days_back:
         
         # Special case: Latest only (days_back=0)
         if days_back == 0:
-            print(f"Downloading LATEST {symbol} 15-minute bar using get_latest_bar()")
+            print(f"Downloading LATEST {symbol} {interval} bar using get_latest_bar()")
             
             # Use the fixed get_latest_bar() method instead of get_historical_data()
             data = provider.get_latest_bar(symbol=symbol, interval=interval)
@@ -144,7 +144,7 @@ async def download_symbol_data(provider: AlpacaProvider, symbol: str, days_back:
             # Calculate start date based on days_back parameter
             start_date = end_time - timedelta(days=days_back)
             
-            print(f"Downloading {symbol} 15-minute bars: {start_date.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')} ({days_back} days back)")
+            print(f"Downloading {symbol} {interval} bars: {start_date.strftime('%Y-%m-%d %H:%M')} to {end_time.strftime('%Y-%m-%d %H:%M')} ({days_back} days back)")
             
             data = provider.get_historical_data(
                 symbol=symbol,
@@ -153,30 +153,40 @@ async def download_symbol_data(provider: AlpacaProvider, symbol: str, days_back:
                 interval=interval
             )
         
-        print(f"Downloaded {len(data)} 15-minute records for {symbol}")
+        print(f"Downloaded {len(data)} {interval} records for {symbol}")
         return len(data)
         
     except Exception as e:
-        print(f"Error downloading {symbol} 15-minute data: {e}")
+        print(f"Error downloading {symbol} {interval} data: {e}")
         return 0
 
 
 # API Endpoints
 
 @router.post("/download/watchlist", response_model=DownloadResponse)
-async def download_watchlist(days_back: int = Query(1, description="Number of days to go back (0 = Latest bar only)")):
+async def download_watchlist(days_back: int = Query(1, description="Number of days to go back (0 = Latest bar only)"), interval: str = Query('15Min', description="Time interval (Daily, Hourly, 30Min, 15Min)")):
     """
     Download price data for all symbols in the watchlist.
-    Uses 15-minute bars with 16-minute delay, clears old data first.
+    Uses configurable interval with appropriate delay, clears old data first.
     
     Args:
         days_back: Number of days to go back from current time (default: 1)
                   Set to 0 to get only the latest bar per symbol (optimal for automation)
+        interval: Time interval (Daily, Hourly, 30Min, 15Min)
     
     Returns:
         DownloadResponse: Download results
     """
-    interval = '15Min'  # Always use 15-minute bars
+    # Map UI intervals to Alpaca format
+    interval_mapping = {
+        'Daily': '1Day',
+        'Hourly': '1Hour', 
+        '30Min': '30Min',
+        '15Min': '15Min'
+    }
+    
+    # Convert interval to Alpaca format
+    alpaca_interval = interval_mapping.get(interval, '15Min')
     
     provider = get_alpaca_provider()
     symbols = load_watchlist()
@@ -187,14 +197,24 @@ async def download_watchlist(days_back: int = Query(1, description="Number of da
             detail="No symbols in watchlist. Update watchlist first."
         )
     
-    # Clear old intraday data first to prevent stale data display
+    # Clear old data first to prevent stale data display
     try:
         cache = get_cache()
-        print("Clearing old intraday data to prevent stale display...")
+        print(f"Clearing old {interval} data to prevent stale display...")
         with cache._get_connection() as conn:
-            result = conn.execute("DELETE FROM intraday_prices WHERE timeframe = '15min'").fetchone()
+            if interval == 'Daily':
+                result = conn.execute("DELETE FROM daily_prices").fetchone()
+            else:
+                # Map interval to timeframe for intraday clearing
+                timeframe_map = {
+                    'Hourly': '1hour',
+                    '30Min': '30min', 
+                    '15Min': '15min'
+                }
+                timeframe = timeframe_map.get(interval, '15min')
+                result = conn.execute("DELETE FROM intraday_prices WHERE timeframe = ?", [timeframe]).fetchone()
             conn.commit()
-        print("Old 15-minute data cleared")
+        print(f"Old {interval} data cleared")
     except Exception as e:
         print(f"Warning: Could not clear old data: {e}")
     
@@ -204,14 +224,14 @@ async def download_watchlist(days_back: int = Query(1, description="Number of da
     
     # Determine range description
     range_desc = "Latest bars only" if days_back == 0 else f"{days_back} days back"
-    print(f"Starting watchlist download with 15-minute bars ({range_desc})")
+    print(f"Starting watchlist download with {interval} bars ({range_desc})")
     
     for symbol in symbols:
         if days_back == 0:
-            print(f"Downloading {symbol} LATEST 15-minute bar...")
+            print(f"Downloading {symbol} LATEST {interval} bar...")
         else:
-            print(f"Downloading {symbol} 15-minute bars ({days_back} days back)...")
-        records = await download_symbol_data(provider, symbol, days_back)
+            print(f"Downloading {symbol} {interval} bars ({days_back} days back)...")
+        records = await download_symbol_data(provider, symbol, days_back, alpaca_interval)
         if records > 0:
             total_records += records
             successful_symbols.append(symbol)
@@ -220,7 +240,7 @@ async def download_watchlist(days_back: int = Query(1, description="Number of da
     
     status = "success" if len(failed_symbols) == 0 else "partial_success" if successful_symbols else "failure"
     range_text = "Latest bars" if days_back == 0 else f"{days_back} days back"
-    message = f"Downloaded 15-minute data for {len(successful_symbols)}/{len(symbols)} symbols ({range_text})"
+    message = f"Downloaded {interval} data for {len(successful_symbols)}/{len(symbols)} symbols ({range_text})"
     if failed_symbols:
         message += f" (Failed: {', '.join(failed_symbols)})"
     
@@ -234,36 +254,46 @@ async def download_watchlist(days_back: int = Query(1, description="Number of da
 
 
 @router.post("/download/symbol/{symbol}", response_model=DownloadResponse)
-async def download_single_symbol(symbol: str, days_back: int = Query(1, description="Number of days to go back (0 = Latest bar only)")):
+async def download_single_symbol(symbol: str, days_back: int = Query(1, description="Number of days to go back (0 = Latest bar only)"), interval: str = Query('15Min', description="Time interval (Daily, Hourly, 30Min, 15Min)")):
     """
     Download price data for a single symbol.
-    Uses 15-minute bars with 16-minute delay.
+    Uses configurable interval with appropriate delay.
     
     Args:
         symbol: Stock symbol to download
         days_back: Number of days to go back from current time (default: 1)
                   Set to 0 to get only the latest bar (optimal for automation)
+        interval: Time interval (Daily, Hourly, 30Min, 15Min)
         
     Returns:
         DownloadResponse: Download results
     """
-    interval = '15Min'  # Always use 15-minute bars
+    # Map UI intervals to Alpaca format
+    interval_mapping = {
+        'Daily': '1Day',
+        'Hourly': '1Hour', 
+        '30Min': '30Min',
+        '15Min': '15Min'
+    }
+    
+    # Convert interval to Alpaca format
+    alpaca_interval = interval_mapping.get(interval, '15Min')
     
     provider = get_alpaca_provider()
     symbol_upper = symbol.upper()
     
     if days_back == 0:
-        print(f"Downloading {symbol_upper} LATEST 15-minute bar...")
+        print(f"Downloading {symbol_upper} LATEST {interval} bar...")
     else:
-        print(f"Downloading {symbol_upper} 15-minute bars ({days_back} days back)...")
+        print(f"Downloading {symbol_upper} {interval} bars ({days_back} days back)...")
     
-    records = await download_symbol_data(provider, symbol_upper, days_back)
+    records = await download_symbol_data(provider, symbol_upper, days_back, alpaca_interval)
     
     if records > 0:
         range_text = "Latest bar" if days_back == 0 else f"{days_back} days back"
         return DownloadResponse(
             status="success",
-            message=f"Downloaded {records} 15-minute records for {symbol_upper} ({range_text})",
+            message=f"Downloaded {records} {interval} records for {symbol_upper} ({range_text})",
             symbols=[symbol_upper],
             records_downloaded=records,
             cache_updated=True
@@ -272,7 +302,7 @@ async def download_single_symbol(symbol: str, days_back: int = Query(1, descript
         range_text = "Latest bar" if days_back == 0 else f"{days_back} days back"
         raise HTTPException(
             status_code=400,
-            detail=f"Failed to download 15-minute data for {symbol_upper} ({range_text})"
+            detail=f"Failed to download {interval} data for {symbol_upper} ({range_text})"
         )
 
 
@@ -336,49 +366,152 @@ async def get_cache_stats():
 @router.get("/cache/recent")
 async def get_recent_cache_data(
     symbol: Optional[str] = None,
-    limit: int = 100
+    limit: int = 100,
+    interval: Optional[str] = None
 ):
     """
-    Get recent market data from cache (15-minute bars).
+    Get recent market data from cache - SMART QUERY for both daily and intraday data.
     
     Args:
         symbol: Optional symbol filter
         limit: Maximum number of records
+        interval: Optional interval filter (Daily, Hourly, 30Min, 15Min)
         
     Returns:
-        dict: Recent market data (15-minute bars)
+        dict: Recent market data (daily or intraday based on what's available)
     """
     cache = get_cache()
     
     try:
         with cache._get_connection() as conn:
-            if symbol:
-                query = """
-                SELECT * FROM intraday_prices 
-                WHERE symbol = ? AND timeframe = '15min'
-                ORDER BY bar_timestamp DESC 
-                LIMIT ?
-                """
-                result = conn.execute(query, [symbol.upper(), limit]).fetchall()
+            # VIPER'S SMART LOGIC: Check which data is available and prioritize accordingly
+            data = []
+            columns = []
+            
+            # If specific interval requested, query that table
+            if interval == 'Daily':
+                # Query daily_prices table
+                if symbol:
+                    query = """
+                    SELECT symbol, trading_date, open, high, low, close, volume,
+                           trading_date as bar_timestamp
+                    FROM daily_prices 
+                    WHERE symbol = ?
+                    ORDER BY trading_date DESC 
+                    LIMIT ?
+                    """
+                    result = conn.execute(query, [symbol.upper(), limit]).fetchall()
+                else:
+                    query = """
+                    SELECT symbol, trading_date, open, high, low, close, volume,
+                           trading_date as bar_timestamp
+                    FROM daily_prices 
+                    ORDER BY trading_date DESC, symbol 
+                    LIMIT ?
+                    """
+                    result = conn.execute(query, [limit]).fetchall()
+                
+                columns = ['symbol', 'trading_date', 'open', 'high', 'low', 'close', 'volume', 'bar_timestamp']
+                data = [dict(zip(columns, row)) for row in result]
+                
+            elif interval in ['Hourly', '30Min', '15Min']:
+                # Query intraday_prices table with specific timeframe
+                timeframe_map = {
+                    'Hourly': '1hour',
+                    '30Min': '30min', 
+                    '15Min': '15min'
+                }
+                timeframe = timeframe_map.get(interval, '15min')
+                
+                if symbol:
+                    query = """
+                    SELECT * FROM intraday_prices 
+                    WHERE symbol = ? AND timeframe = ?
+                    ORDER BY bar_timestamp DESC 
+                    LIMIT ?
+                    """
+                    result = conn.execute(query, [symbol.upper(), timeframe, limit]).fetchall()
+                else:
+                    query = """
+                    SELECT * FROM intraday_prices 
+                    WHERE timeframe = ?
+                    ORDER BY bar_timestamp DESC, symbol 
+                    LIMIT ?
+                    """
+                    result = conn.execute(query, [timeframe, limit]).fetchall()
+                    
+                columns = [desc[0] for desc in conn.description]
+                data = [dict(zip(columns, row)) for row in result]
+                
             else:
-                query = """
-                SELECT * FROM intraday_prices 
-                WHERE timeframe = '15min'
-                ORDER BY bar_timestamp DESC, symbol 
-                LIMIT ?
-                """
-                result = conn.execute(query, [limit]).fetchall()
-            
-            # Get column names
-            columns = [desc[0] for desc in conn.description]
-            
-            # Convert to list of dictionaries
-            data = [dict(zip(columns, row)) for row in result]
+                # NO INTERVAL SPECIFIED - SMART AUTO-DETECTION
+                # Check what data we have and show the most recent/relevant
+                
+                # First check for daily data
+                daily_count_query = "SELECT COUNT(*) FROM daily_prices"
+                daily_count = conn.execute(daily_count_query).fetchone()[0]
+                
+                # Check for intraday data
+                intraday_count_query = "SELECT COUNT(*) FROM intraday_prices"
+                intraday_count = conn.execute(intraday_count_query).fetchone()[0]
+                
+                if daily_count > 0 and intraday_count == 0:
+                    # Only daily data available - show daily
+                    if symbol:
+                        query = """
+                        SELECT symbol, trading_date, open, high, low, close, volume,
+                               trading_date as bar_timestamp
+                        FROM daily_prices 
+                        WHERE symbol = ?
+                        ORDER BY trading_date DESC 
+                        LIMIT ?
+                        """
+                        result = conn.execute(query, [symbol.upper(), limit]).fetchall()
+                    else:
+                        query = """
+                        SELECT symbol, trading_date, open, high, low, close, volume,
+                               trading_date as bar_timestamp
+                        FROM daily_prices 
+                        ORDER BY trading_date DESC, symbol 
+                        LIMIT ?
+                        """
+                        result = conn.execute(query, [limit]).fetchall()
+                    
+                    columns = ['symbol', 'trading_date', 'open', 'high', 'low', 'close', 'volume', 'bar_timestamp']
+                    data = [dict(zip(columns, row)) for row in result]
+                    
+                elif intraday_count > 0:
+                    # Intraday data available - show 15min (default)
+                    if symbol:
+                        query = """
+                        SELECT * FROM intraday_prices 
+                        WHERE symbol = ? AND timeframe = '15min'
+                        ORDER BY bar_timestamp DESC 
+                        LIMIT ?
+                        """
+                        result = conn.execute(query, [symbol.upper(), limit]).fetchall()
+                    else:
+                        query = """
+                        SELECT * FROM intraday_prices 
+                        WHERE timeframe = '15min'
+                        ORDER BY bar_timestamp DESC, symbol 
+                        LIMIT ?
+                        """
+                        result = conn.execute(query, [limit]).fetchall()
+                    
+                    columns = [desc[0] for desc in conn.description]
+                    data = [dict(zip(columns, row)) for row in result]
+                    
+                else:
+                    # No data available
+                    data = []
+                    columns = []
             
             return {
                 "data": data,
                 "count": len(data),
-                "columns": columns
+                "columns": columns,
+                "data_source": "daily" if interval == 'Daily' or (not interval and daily_count > 0 and intraday_count == 0) else "intraday"
             }
             
     except Exception as e:
@@ -953,7 +1086,7 @@ async def run_hebbnet_training(request: TrainingRequest):
             for symbol in request.symbols:
                 # Get recent 15-minute data for training
                 query = """
-                SELECT symbol, bar_timestamp, open_price, high_price, low_price, close_price, volume 
+                SELECT symbol, bar_timestamp, open, high, low, close, volume 
                 FROM intraday_prices 
                 WHERE symbol = ? AND timeframe = '15min'
                 ORDER BY bar_timestamp DESC 
@@ -1061,7 +1194,7 @@ async def generate_predictions(request: PredictionRequest):
             for symbol in symbols:
                 # Get latest price data
                 query = """
-                SELECT symbol, close_price, bar_timestamp
+                SELECT symbol, close, bar_timestamp
                 FROM intraday_prices 
                 WHERE symbol = ? AND timeframe = '15min'
                 ORDER BY bar_timestamp DESC 

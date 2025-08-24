@@ -584,7 +584,18 @@
                 <!-- DATA ACQUISITION -->
                 <div class="fire-card">
                     <h3>📡 DATA ACQUISITION</h3>
-                    <p style="color: #7da3cc; margin-bottom: 15px;">Downloads recent market data (15-minute bars, 16-minute delay)</p>
+                    <p style="color: #7da3cc; margin-bottom: 15px;">Downloads market data with configurable interval</p>
+                    
+                    <!-- Interval Selector -->
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; color: #7da3cc; margin-bottom: 5px; font-size: 0.9rem; font-weight: 600;">⚡ INTERVAL:</label>
+                        <select id="intervalSelect" class="fire-input" style="margin: 0;">
+                            <option value="Daily">Daily</option>
+                            <option value="Hourly">Hourly</option>
+                            <option value="30Min">30 Minute</option>
+                            <option value="15Min" selected>15 Minute</option>
+                        </select>
+                    </div>
                     
                     <!-- Date Range Selector -->
                     <div style="margin-bottom: 15px;">
@@ -624,7 +635,7 @@
             <!-- MARKET DATA ANALYSIS - UNIFIED WIDE SECTION -->
             <div class="fire-card wide-market-data">
                 <h3>📊 MARKET DATA ANALYSIS</h3>
-                <p style="color: #7da3cc; margin-bottom: 15px;">View recent market activity (15-minute bars)</p>
+                <p style="color: #7da3cc; margin-bottom: 15px;" id="marketDataDescription">View recent market activity</p>
                 
                 <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
                     <div class="button-group" style="margin: 0;">
@@ -637,7 +648,7 @@
                 </div>
                 
                 <div id="marketDataTable" class="fire-table" style="width: 100%; overflow-x: auto;">
-                    <p style="padding: 20px; text-align: center; color: #999;">Ready to load recent market data - Click Load Data to view 15-minute bars</p>
+                    <p style="padding: 20px; text-align: center; color: #999;" id="marketDataPlaceholder">Ready to load recent market data - Select interval and click Load Data</p>
                 </div>
             </div>
                 </div> <!-- End DATA tab -->
@@ -915,11 +926,14 @@
         }
 
         async function downloadWatchlist() {
-            const interval = '15Min'; // Always use 15-minute bars
+            const interval = document.getElementById('intervalSelect').value;
             const daysBack = document.getElementById('dateRangeSelect').value;
             const dateRangeText = document.getElementById('dateRangeSelect').selectedOptions[0].text;
             
-            addActivity(`🚀 Downloading watchlist data (15-minute bars, ${dateRangeText})...`, 'trade');
+            // Save interval preference to localStorage
+            localStorage.setItem('dokkaebi_interval_preference', interval);
+            
+            addActivity(`🚀 Downloading watchlist data (${interval} bars, ${dateRangeText})...`, 'trade');
             
             try {
                 const res = await fetch(`${apiHost}/api/download/watchlist?interval=${interval}&days_back=${daysBack}`, {
@@ -933,7 +947,7 @@
                 
                 const data = await res.json();
                 
-                addActivity(`🔥 Downloaded 15-minute data for ${data.symbols.length} symbols (${dateRangeText})! ${data.records_downloaded} records acquired!`, 'success');
+                addActivity(`🔥 Downloaded ${interval} data for ${data.symbols.length} symbols (${dateRangeText})! ${data.records_downloaded} records acquired!`, 'success');
                 
                 // Update stats after download
                 setTimeout(refreshMarketPulse, 1000);
@@ -946,16 +960,19 @@
         async function downloadSingleSymbol() {
             const symbolInput = document.getElementById('singleSymbolInput');
             const symbol = symbolInput.value.trim().toUpperCase();
-            const interval = '15Min'; // Always use 15-minute bars
+            const interval = document.getElementById('intervalSelect').value;
             const daysBack = document.getElementById('dateRangeSelect').value;
             const dateRangeText = document.getElementById('dateRangeSelect').selectedOptions[0].text;
+            
+            // Save interval preference to localStorage
+            localStorage.setItem('dokkaebi_interval_preference', interval);
             
             if (!symbol) {
                 addActivity('Enter a symbol to target!', 'error');
                 return;
             }
             
-            addActivity(`🎯 Targeting ${symbol} for 15-minute data acquisition (${dateRangeText})...`, 'trade');
+            addActivity(`🎯 Targeting ${symbol} for ${interval} data acquisition (${dateRangeText})...`, 'trade');
             
             try {
                 const res = await fetch(`${apiHost}/api/download/symbol/${symbol}?interval=${interval}&days_back=${daysBack}`, {
@@ -974,7 +991,7 @@
                 console.log(data);
                 console.log('=== END RESPONSE DATA ===');
                 
-                addActivity(`🔥 Target acquired! Downloaded ${data.records_downloaded} 15-minute records for ${symbol} (${dateRangeText})`, 'success');
+                addActivity(`🔥 Target acquired! Downloaded ${data.records_downloaded} ${interval} records for ${symbol} (${dateRangeText})`, 'success');
                 symbolInput.value = '';
                 
                 // Update stats after download
@@ -1031,7 +1048,7 @@
         function createFireTable(data, containerId) {
             const container = document.getElementById(containerId);
             
-            if (!data.data || data.data.length === 0) {
+            if (!data.data || !data.count || data.count === 0) {
                 container.innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No data available</p>';
                 return;
             }
@@ -1098,14 +1115,17 @@
         }
 
         async function loadMarketData() {
-            addActivity(`📊 Loading recent market data (15-minute bars)...`);
+            const interval = document.getElementById('intervalSelect').value;
+            addActivity(`📊 Loading recent market data (${interval} bars)...`);
             
             try {
-                const res = await fetch(`${apiHost}/api/cache/recent?limit=10000`);
+                // VIPER'S FIX: Pass interval parameter to backend so it knows which table to query
+                const res = await fetch(`${apiHost}/api/cache/recent?limit=10000&interval=${interval}`);
                 const data = await res.json();
                 
                 createFireTable(data, 'marketDataTable');
-                addActivity(`Market data loaded: ${data.count} recent records`, 'success');
+                const dataSource = data.data_source === 'daily' ? 'daily' : 'intraday';
+                addActivity(`Market data loaded: ${data.count} recent ${dataSource} records (${interval})`, 'success');
                 
             } catch (error) {
                 addActivity(`Failed to load market data: ${error.message}`, 'error');
@@ -1114,20 +1134,23 @@
 
         async function filterMarketData() {
             const symbol = document.getElementById('marketDataSymbolFilter').value.trim().toUpperCase();
+            const interval = document.getElementById('intervalSelect').value;
             
             if (!symbol) {
                 addActivity('Enter a symbol to filter data', 'error');
                 return;
             }
             
-            addActivity(`🔍 Filtering recent data for ${symbol}...`);
+            addActivity(`🔍 Filtering recent ${interval} data for ${symbol}...`);
             
             try {
-                const res = await fetch(`${apiHost}/api/cache/recent?limit=10000&symbol=${symbol}`);
+                // VIPER'S FIX: Pass interval parameter for filtered queries too
+                const res = await fetch(`${apiHost}/api/cache/recent?limit=10000&symbol=${symbol}&interval=${interval}`);
                 const data = await res.json();
                 
                 createFireTable(data, 'marketDataTable');
-                addActivity(`Market data filtered: ${data.count} records for ${symbol}`, 'success');
+                const dataSource = data.data_source === 'daily' ? 'daily' : 'intraday';
+                addActivity(`Market data filtered: ${data.count} ${dataSource} records for ${symbol} (${interval})`, 'success');
                 
             } catch (error) {
                 addActivity(`Failed to filter market data: ${error.message}`, 'error');
@@ -1136,9 +1159,10 @@
 
         function clearMarketData() {
             const marketDataTable = document.getElementById('marketDataTable');
+            const interval = document.getElementById('intervalSelect').value;
             
             // Clear the table and show the default message
-            marketDataTable.innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">Ready to load recent market data - Click Load Data to view 15-minute bars</p>';
+            marketDataTable.innerHTML = `<p style="padding: 20px; text-align: center; color: #999;">Ready to load recent market data - Click Load Data to view ${interval} bars</p>`;
             
             // Clear the symbol filter input
             document.getElementById('marketDataSymbolFilter').value = '';
@@ -1147,9 +1171,39 @@
             addActivity('🧹 Market data view cleared - Ready for new data', 'success');
         }
 
+        // Function to update UI based on selected interval
+        function updateIntervalUI() {
+            const interval = document.getElementById('intervalSelect').value;
+            const marketDataDescription = document.getElementById('marketDataDescription');
+            const marketDataPlaceholder = document.getElementById('marketDataPlaceholder');
+            
+            // Update descriptions to show current interval
+            marketDataDescription.textContent = `View recent market activity (${interval} bars)`;
+            marketDataPlaceholder.textContent = `Ready to load recent market data - Click Load Data to view ${interval} bars`;
+        }
+        
+        // Function to load user preferences
+        function loadUserPreferences() {
+            // Load saved interval preference
+            const savedInterval = localStorage.getItem('dokkaebi_interval_preference');
+            if (savedInterval) {
+                const intervalSelect = document.getElementById('intervalSelect');
+                if (intervalSelect) {
+                    intervalSelect.value = savedInterval;
+                }
+            }
+            updateIntervalUI();
+        }
+        
         // Initialize Trading Terminal
         window.onload = async function() {
             addActivity('Trading terminal initializing...', 'trade');
+            
+            // Load user preferences first
+            loadUserPreferences();
+            
+            // Set up interval change listener
+            document.getElementById('intervalSelect').addEventListener('change', updateIntervalUI);
             
             // Load initial data
             await Promise.all([

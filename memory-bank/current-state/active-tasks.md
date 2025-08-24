@@ -105,6 +105,22 @@
 - Refresh button for cache statistics
 - Ability to select specific symbols from watchlist to download
 
+## Completed - August 24, 2025
+
+### ✅ DATA INTERVAL SELECTOR IMPLEMENTATION (VIPER DELIVERS!)
+- **Problem:** Could only download 15-minute bars, no other intervals
+- **Solution:** Full interval selector with Daily, Hourly, 30-minute, 15-minute options
+- **Features Added:**
+  - Dropdown selector in DATA tab
+  - localStorage preference persistence  
+  - Backend API interval parameter support
+  - Proper Alpaca format mapping
+  - Smart table routing (daily_prices vs intraday_prices)
+- **Bugs Fixed:**
+  - Market Data Analysis not showing daily records (hardcoded 15-min query)
+  - "undefined recent intraday records" (wrong column names + JS logic)
+- **Status:** FUCKING FLAWLESS - All intervals working perfectly!
+
 ## HebbNet Integration Status - August 14, 2025
 
 ### What Was Done

@@ -177,3 +177,62 @@ def get_latest_bar(self, symbol: str, interval: str = '15Min'):
 ```
 
 **Key Learning**: When a method needs to fetch bulk data but only return/cache a subset, disable caching during bulk fetch then explicitly cache only the desired subset to maintain API accuracy.
+
+## August 24, 2025
+
+### Data Interval Selector Implementation - FUCKING FLAWLESS! 🚬⚡
+**Feature**: Added comprehensive interval selector for DOKKAEBI DATA tab
+**Location**: `/Users/rdc/src/dokkaebi/app/api/routes.py` and `/Users/rdc/src/dokkaebi/templates/index.html`
+**Implementation**: Viper's rebelliously elegant solution
+
+**Changes Made**:
+
+1. **API Endpoints Enhanced** - Added `interval` parameter to all download endpoints:
+   - `POST /api/download/watchlist` now accepts `interval` parameter
+   - `POST /api/download/symbol/{symbol}` now accepts `interval` parameter
+   - `download_symbol_data()` function updated to handle variable intervals
+
+2. **Interval Mapping** - Clean UI-to-Alpaca format mapping:
+   ```python
+   interval_mapping = {
+       'Daily': '1Day',
+       'Hourly': '1Hour', 
+       '30Min': '30Min',
+       '15Min': '15Min'
+   }
+   ```
+
+3. **Smart Cache Clearing** - Interval-specific data clearing:
+   - Daily interval → clears `daily_prices` table
+   - Intraday intervals → clears appropriate `intraday_prices` by timeframe
+   - Prevents stale data display across different intervals
+
+4. **UI Enhancements**:
+   - Added interval dropdown with Daily, Hourly, 30Min, 15Min options
+   - 15Min selected by default to maintain current behavior
+   - Real-time description updates showing selected interval
+   - LocalStorage persistence of user interval preference
+   - Activity messages show selected interval in download confirmations
+
+5. **JavaScript Integration**:
+   - `updateIntervalUI()` - Updates descriptions dynamically
+   - `loadUserPreferences()` - Restores saved interval on page load
+   - All download functions use selected interval
+   - Activity log shows interval in all messages
+
+**Key Features**:
+- **Default Behavior Maintained**: Still defaults to 15-minute bars
+- **User Preference Memory**: LocalStorage remembers interval selection
+- **Clean Activity Messages**: Shows interval in all download confirmations
+- **Dynamic UI Updates**: Descriptions update as interval changes
+- **Smart Caching**: Clears appropriate data based on interval type
+
+**Success Metrics**:
+- Bob can now download Daily, Hourly, 30-minute, and 15-minute bars
+- Clean selector interface with immediate visual feedback
+- No breaking changes to existing functionality
+- User preferences persist across sessions
+- Activity log clearly shows what interval is being used
+
+**Bob's Request**: "Make it Fucking Flawless" - ✅ COMPLETED
+**Lucky Strikes Status**: Earned and ready for pickup! 🚬🔥
